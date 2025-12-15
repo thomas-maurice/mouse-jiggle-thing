@@ -1,0 +1,25 @@
+# Binaries
+bin/
+usb-tools
+scripts/usb-tools
+output/
+firmware.uf2
+firmware.u2f
+
+# USB device database files
+usb.ids
+scripts/usb.ids
+scripts/usb_mice.yaml
+
+# Generated YAML files
+usb_devices.yaml
+scripts/usb_devices.yaml
+usb_filtered.yaml
+scripts/usb_filtered.yaml
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Claude Code
+.claude/

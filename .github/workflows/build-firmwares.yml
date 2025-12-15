@@ -1,0 +1,115 @@
+name: Build Firmwares
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Install TinyGo
+        run: |
+          TINYGO_VERSION=$(curl -s https://api.github.com/repos/tinygo-org/tinygo/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+          wget https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo_${TINYGO_VERSION}_amd64.deb
+          sudo dpkg -i tinygo_${TINYGO_VERSION}_amd64.deb
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y parallel
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Build usb-tools
+        run: GO=/usr/bin/go make usb-tools
+
+      - name: Generate firmwares for shard ${{ matrix.shard }}
+        run: ./scripts/generate_all_firmwares.sh
+        env:
+          SHARD_INDEX: ${{ matrix.shard }}
+          SHARD_TOTAL: 16
+          TARGET: both
+
+      - name: Upload shard artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmwares-shard-${{ matrix.shard }}
+          path: |
+            output/rp2040/*.uf2
+            output/rp2350/*.uf2
+          retention-days: 90
+
+  combine:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Download all shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: firmwares-shard-*
+          path: all-firmwares
+          merge-multiple: true
+
+      - name: Create firmware archive
+        id: archive
+        run: |
+          ls -la all-firmwares/
+          mkdir -p rp2040 rp2350
+          find all-firmwares -type f -name "*.uf2" -path "*/output/rp2040/*" -exec mv {} rp2040/ \;
+          find all-firmwares -type f -name "*.uf2" -path "*/output/rp2350/*" -exec mv {} rp2350/ \;
+          zip -r firmwares.zip rp2040/ rp2350/
+          RP2040_COUNT=$(find rp2040 -name "*.uf2" | wc -l)
+          RP2350_COUNT=$(find rp2350 -name "*.uf2" | wc -l)
+          FIRMWARE_COUNT=$((RP2040_COUNT + RP2350_COUNT))
+          echo "Generated $FIRMWARE_COUNT firmwares (RP2040: $RP2040_COUNT, RP2350: $RP2350_COUNT)"
+          echo "count=$FIRMWARE_COUNT" >> $GITHUB_OUTPUT
+          echo "rp2040_count=$RP2040_COUNT" >> $GITHUB_OUTPUT
+          echo "rp2350_count=$RP2350_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: firmwares.zip
+          body: |
+            ## Mouse Jiggle Firmwares
+
+            **${{ steps.archive.outputs.count }} firmware files included**
+            - RP2040 (Raspberry Pi Pico): ${{ steps.archive.outputs.rp2040_count }} firmwares
+            - RP2350 (Raspberry Pi Pico 2): ${{ steps.archive.outputs.rp2350_count }} firmwares
+
+            ### Usage
+            1. Download `firmwares.zip`
+            2. Extract it
+            3. Choose the folder for your board (`rp2040/` or `rp2350/`)
+            4. Find your mouse firmware (named by vendor, product, VID:PID)
+            5. Put your Raspberry Pi Pico into bootloader mode (hold BOOTSEL while plugging in)
+            6. Copy the .uf2 file to the RPI-RP2 drive
+            7. The device will automatically reboot and appear as your chosen mouse
+
+            ### What's included
+            - ${{ steps.archive.outputs.count }} individual firmware files, one for each mouse in the USB device database
+            - Each firmware emulates a specific mouse model
+            - Support for both RP2040 (original Pico) and RP2350 (Pico 2)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
