@@ -1,3 +1,8 @@
+// Copyright (C) 2025 Thomas Maurice <thomas@maurice.fr>
+// This work is free. You can redistribute it and/or modify it under the
+// terms of the Do What The Fuck You Want To Public License, Version 2,
+// as published by Sam Hocevar. See the LICENSE file for more details.
+
 package main
 
 import (
@@ -15,7 +20,7 @@ import (
 const (
 	// Probs should not be too high if you value your eyesight
 	// (don't ask me how I found out)
-	MAX_BRIGHTNESS = 15
+	MAX_BRIGHTNESS = 10
 	MIN_BRIGHTNESS = 0
 
 	// 5000 ms of jitter
@@ -24,7 +29,7 @@ const (
 	BASE_WAIT_TIME_MS = 500
 
 	// Jitter for the increment
-	BRIGHTNESS_INCREMENT_JITTER = 4
+	BRIGHTNESS_INCREMENT_JITTER = 3
 )
 
 var usbVID, usbPID string

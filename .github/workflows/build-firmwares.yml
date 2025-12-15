@@ -27,7 +27,8 @@ jobs:
 
       - name: Install TinyGo
         run: |
-          TINYGO_VERSION=$(curl -s https://api.github.com/repos/tinygo-org/tinygo/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+          TINYGO_VERSION=$(curl -s https://api.github.com/repos/tinygo-org/tinygo/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+          echo "Installing TinyGo version: $TINYGO_VERSION"
           wget https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo_${TINYGO_VERSION}_amd64.deb
           sudo dpkg -i tinygo_${TINYGO_VERSION}_amd64.deb
 
@@ -52,9 +53,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: firmwares-shard-${{ matrix.shard }}
-          path: |
-            output/rp2040/*.uf2
-            output/rp2350/*.uf2
+          path: output/
           retention-days: 90
 
   combine:
@@ -63,6 +62,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Download all shard artifacts
         uses: actions/download-artifact@v4
         with:
@@ -74,17 +76,12 @@ jobs:
         id: archive
         run: |
           ls -la all-firmwares/
-          mkdir -p rp2040 rp2350
-          find all-firmwares -type f -name "*.uf2" -path "*/output/rp2040/*" -exec mv {} rp2040/ \;
-          find all-firmwares -type f -name "*.uf2" -path "*/output/rp2350/*" -exec mv {} rp2350/ \;
-          zip -r firmwares.zip rp2040/ rp2350/
-          RP2040_COUNT=$(find rp2040 -name "*.uf2" | wc -l)
-          RP2350_COUNT=$(find rp2350 -name "*.uf2" | wc -l)
-          FIRMWARE_COUNT=$((RP2040_COUNT + RP2350_COUNT))
-          echo "Generated $FIRMWARE_COUNT firmwares (RP2040: $RP2040_COUNT, RP2350: $RP2350_COUNT)"
-          echo "count=$FIRMWARE_COUNT" >> $GITHUB_OUTPUT
-          echo "rp2040_count=$RP2040_COUNT" >> $GITHUB_OUTPUT
-          echo "rp2350_count=$RP2350_COUNT" >> $GITHUB_OUTPUT
+          ls -la all-firmwares/rp2040/ 2>/dev/null || echo "No rp2040 dir"
+          ls -la all-firmwares/rp2350/ 2>/dev/null || echo "No rp2350 dir"
+          # When merge-multiple is true, artifacts preserve their directory structure
+          cd all-firmwares
+          cp ../LICENSE .
+          zip -r ../firmwares.zip rp2040/ rp2350/ LICENSE
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -93,10 +90,6 @@ jobs:
           files: firmwares.zip
           body: |
             ## Mouse Jiggle Firmwares
-
-            **${{ steps.archive.outputs.count }} firmware files included**
-            - RP2040 (Raspberry Pi Pico): ${{ steps.archive.outputs.rp2040_count }} firmwares
-            - RP2350 (Raspberry Pi Pico 2): ${{ steps.archive.outputs.rp2350_count }} firmwares
 
             ### Usage
             1. Download `firmwares.zip`
@@ -108,7 +101,7 @@ jobs:
             7. The device will automatically reboot and appear as your chosen mouse
 
             ### What's included
-            - ${{ steps.archive.outputs.count }} individual firmware files, one for each mouse in the USB device database
+            - Individual firmware files for different mouse models from the USB device database
             - Each firmware emulates a specific mouse model
             - Support for both RP2040 (original Pico) and RP2350 (Pico 2)
         env:

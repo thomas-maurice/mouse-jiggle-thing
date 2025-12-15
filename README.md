@@ -1,10 +1,12 @@
 # Mouse Jiggle Thing 🐭
 
+![Product Preview](_img/preview.jpg)
+
 ## English
 
-### Is your boss a cuntish idiot who wants to track your every movement down to your mouse clicks?
+### Is your boss overly controlling and wants to track your every movement down to your mouse clicks?
 
-**Good news!** This project makes that bullshit stop working.
+**Good news!** This project makes that invasive tracking stop working.
 
 The preferred kind of device to achieve such shenanigans is [this one](https://nl.aliexpress.com/w/wholesale-TENSTAR-RP2350%2525252dUSB.html)
 
@@ -56,9 +58,9 @@ TARGET=rp2350 ./scripts/generate_all_firmwares.sh
 
 ## Français
 
-### Votre patron est un connard qui veut traquer chacun de vos mouvements jusqu'aux clics de souris ?
+### Votre patron est trop contrôlant et veut traquer chacun de vos mouvements jusqu'aux clics de souris ?
 
-**Bonne nouvelle !** Ce projet fait en sorte que ces conneries ne marchent plus.
+**Bonne nouvelle !** Ce projet fait en sorte que ce tracking invasif ne marche plus.
 
 ### Appareils supportés
 Les trucs comme [ça](https://nl.aliexpress.com/w/wholesale-TENSTAR-RP2350%2525252dUSB.html)
@@ -111,7 +113,9 @@ TARGET=rp2350 ./scripts/generate_all_firmwares.sh
 
 ## License
 
-Do whatever the fuck you want with this. Seriously.
+This project is licensed under the WTFPL (Do What The Fuck You Want To Public License).
+
+See the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 

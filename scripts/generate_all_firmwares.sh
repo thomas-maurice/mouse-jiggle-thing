@@ -16,7 +16,7 @@ USB_TOOLS="${PROJECT_ROOT}/bin/usb-tools"
 # Find the correct go binary (not tinygo's wrapper)
 find_go() {
     # Check common locations
-    for go_path in /usr/bin/go /usr/local/go/bin/go /Users/thomas/.nix-profile/bin/go; do
+    for go_path in /usr/bin/go /usr/local/go/bin/go; do
         if [ -f "$go_path" ]; then
             echo "$go_path"
             return
